@@ -1,0 +1,141 @@
+﻿@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+@inject Legal_Law_Transactions.Models.ApplicationDbContext _context
+@using Microsoft.EntityFrameworkCore
+
+@{
+    var email = HttpContextAccessor.HttpContext.Session.GetString("UserEmail");
+    var currentUser = _context.Users.FirstOrDefault(u => u.email == email);
+
+    int pageSize = 10;
+    int page = Context.Request.Query["page"].Count > 0 ? int.Parse(Context.Request.Query["page"]) : 1;
+
+    var totalEvidences = _context.Evidences.Count();
+    int totalPages = (int)Math.Ceiling(totalEvidences / (double)pageSize);
+
+    var evidences = _context.Evidences
+        .Include(e => e.Case)
+        .Include(e => e.User)
+        .OrderByDescending(e => e.created_at)
+        .Skip((page - 1) * pageSize)
+        .Take(pageSize)
+        .ToList();
+
+    var cases = _context.Cases.ToList();
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prosecutor Evidences</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+<body>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar-container p-0 shadow-sm">
+                <div class="sidebar text-white bg-dark h-100 p-4">
+                    <h4 class="mb-4 fw-bold text-center">Prosecutor</h4>
+                    <ul class="nav flex-column">
+                        <li class="nav-item mb-2">
+                            <a href="/Prosecutor/Dashboard" class="nav-link text-white d-flex align-items-center gap-2">
+                                <i class="bi bi-house-fill"></i> Home
+                            </a>
+                        </li>
+                        <li class="nav-item mb-2">
+                            <a href="/Prosecutor/Cases" class="nav-link text-white d-flex align-items-center gap-2">
+                                <i class="bi bi-briefcase-fill"></i> Cases
+                            </a>
+                        </li>
+                        <li class="nav-item mb-2">
+                            <a href="/Prosecutor/Documents" class="nav-link text-white d-flex align-items-center gap-2">
+                                <i class="bi bi-folder2-open"></i> Documents
+                            </a>
+                        </li>
+                        <li class="nav-item mb-2">
+                            <a href="/Prosecutor/Evidences" class="nav-link text-white d-flex align-items-center gap-2">
+                                <i class="bi bi-file-earmark-text-fill"></i> Evidences
+                            </a>
+                        </li>
+                        <li class="nav-item mb-2">
+                            <a href="/Prosecutor/Schedules" class="nav-link text-white d-flex align-items-center gap-2">
+                                <i class="bi bi-calendar-event"></i> Schedules
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>Evidences</h2>
+                </div>
+
+                <table class="table table-bordered table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>File</th>
+                            <th>Case Number</th>
+                            <th>Description</th>
+                            <th>Submitted By</th>
+                            <th>Status</th>
+                            <th>Date Submitted</th>
+                            <th>Assigned To</th>
+
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var evidence in evidences)
+                        {
+
+                            <tr>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(evidence.file_path))
+                                    {
+                                        <a href="@Url.Action("ViewEvidence", "Prosecutor", new { fileName = evidence.file_path.Substring(evidence.file_path.LastIndexOf("/") + 1) })" target="_blank" class="btn btn-outline-primary btn-sm">
+                                            View Evidence
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span>No File</span>
+                                    }
+                                </td>
+                                <td>@evidence.Case.case_number</td>
+                                <td>@evidence.description</td>
+                                <td>@evidence.User.firstname @evidence.User.lastname</td>
+                                <td>@evidence.status</td>
+                                <td>@evidence.created_at.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td>
+                                    @_context.Users.FirstOrDefault(u => u.user_id == evidence.assigned_to_lawyer)?.firstname
+                                    @_context.Users.FirstOrDefault(u => u.user_id == evidence.assigned_to_lawyer)?.lastname
+                                </td>
+
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                <!-- Pagination -->
+                <nav>
+                    <ul class="pagination">
+                        @for (int i = 1; i <= totalPages; i++)
+                        {
+                            <li class="page-item @(i == page ? "active" : "")">
+                                <a class="page-link" href="@Url.Action("Evidences", "Prosecutor", new { page = i })">@i</a>
+                            </li>
+                        }
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+   
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

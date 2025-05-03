@@ -1,0 +1,130 @@
+﻿@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+@inject Legal_Law_Transactions.Models.ApplicationDbContext _context
+
+@{
+    var email = HttpContextAccessor.HttpContext.Session.GetString("UserEmail");
+    var currentUser = _context.Users.FirstOrDefault(u => u.email == email);
+
+    var caseCount = _context.Cases.Count();
+    var documentCount = _context.Documents.Count();
+    var evidenceCount = _context.Records.Count(); 
+    var scheduleCount = _context.Schedules.Count();
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prosecutor Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+</head>
+<body>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar-container p-0 shadow-sm">
+                <div class="sidebar text-white bg-dark h-100 p-4">
+                    <h4 class="mb-4 fw-bold text-center">Prosecutor</h4>
+                    <ul class="nav flex-column">
+                        <li class="nav-item mb-2">
+                            <a href="/Prosecutor/Dashboard" class="nav-link text-white d-flex align-items-center gap-2">
+                                <i class="bi bi-house-fill"></i> Home
+                            </a>
+                        </li>
+                        <li class="nav-item mb-2">
+                            <a href="/Prosecutor/Cases" class="nav-link text-white d-flex align-items-center gap-2">
+                                <i class="bi bi-briefcase-fill"></i> Cases
+                            </a>
+                        </li>
+                        <li class="nav-item mb-2">
+                            <a href="/Prosecutor/Documents" class="nav-link text-white d-flex align-items-center gap-2">
+                                <i class="bi bi-folder2-open"></i> Documents
+                            </a>
+                        </li>
+                        <li class="nav-item mb-2">
+                            <a href="/Prosecutor/Evidences" class="nav-link text-white d-flex align-items-center gap-2">
+                                <i class="bi bi-file-earmark-text-fill"></i> Evidences
+                            </a>
+                        </li>
+                        <li class="nav-item mb-2">
+                            <a href="/Prosecutor/Schedules" class="nav-link text-white d-flex align-items-center gap-2">
+                                <i class="bi bi-calendar-event"></i> Schedules
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Dashboard Content -->
+            <div class="col-md-9 col-lg-10 p-4">
+                <h2 class="mb-4">Welcome, @currentUser?.firstname!</h2>
+
+                <!-- Row for Statistics -->
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card text-white bg-primary">
+                            <div class="card-header">Cases</div>
+                            <div class="card-body">
+                                <h5 class="card-title">@caseCount</h5>
+                                <p class="card-text">All assigned or monitored cases.</p>
+                            </div>
+                            <div class="card-footer">
+                                <a href="/Prosecutor/Cases" class="text-white">View details</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="card text-white bg-success">
+                            <div class="card-header">Documents</div>
+                            <div class="card-body">
+                                <h5 class="card-title">@documentCount</h5>
+                                <p class="card-text">All uploaded legal documents.</p>
+                            </div>
+                            <div class="card-footer">
+                                <a href="/Prosecutor/Documents" class="text-white">View details</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="card text-white bg-warning">
+                            <div class="card-header">Evidences</div>
+                            <div class="card-body">
+                                <h5 class="card-title">@evidenceCount</h5>
+                                <p class="card-text">Uploaded evidences available.</p>
+                            </div>
+                            <div class="card-footer">
+                                <a href="/Prosecutor/Evidences" class="text-white">View details</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="card text-white bg-info">
+                            <div class="card-header">Schedules</div>
+                            <div class="card-body">
+                                <h5 class="card-title">@scheduleCount</h5>
+                                <p class="card-text">Upcoming court schedules.</p>
+                            </div>
+                            <div class="card-footer">
+                                <a href="/Prosecutor/Schedules" class="text-white">View details</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-light text-muted py-2 mt-5" style="font-size: 0.9rem;">
+        <div class="container text-center">
+            &copy; 2025 - Legal_Law_Transactions. All rights reserved.
+        </div>
+    </footer>
+
+</body>
+</html>

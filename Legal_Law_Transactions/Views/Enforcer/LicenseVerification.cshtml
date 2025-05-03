@@ -1,0 +1,228 @@
+﻿@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+@inject Legal_Law_Transactions.Models.ApplicationDbContext _context
+@using Microsoft.EntityFrameworkCore
+
+@{
+    ViewData["Title"] = "License Verification";
+
+    int page = Convert.ToInt32(Context.Request.Query["page"]);
+    if (page < 1) page = 1;
+
+    int pageSize = 10;
+    var totalLicenses = _context.Licenses.Count();
+    int totalPages = (int)Math.Ceiling(totalLicenses / (double)pageSize);
+
+    var licenses = _context.Licenses
+       .Include(l => l.User)
+       .OrderBy(l => l.license_id)
+       .Skip((page - 1) * pageSize)
+       .Take(pageSize)
+       .ToList();
+
+    var email = HttpContextAccessor.HttpContext.Session.GetString("UserEmail");
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>@ViewData["Title"]</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar-custom">
+        <div class="fw-semibold">Law Enforcement</div>
+        <div class="d-flex align-items-center gap-3">
+            <div class="dropdown">
+                <button class="btn btn-light position-relative border-0" data-bs-toggle="dropdown">
+                    <i class="bi bi-bell-fill fs-4 text-primary"></i>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">3</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#"><i class="bi bi-exclamation-circle me-2 text-warning"></i> New case added</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="bi bi-person-plus me-2 text-info"></i> User requested approval</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="bi bi-file-earmark-check me-2 text-success"></i> Document updated</a></li>
+                </ul>
+            </div>
+
+            <div class="dropdown">
+                <button class="btn btn-light d-flex align-items-center gap-2 rounded-pill px-3 py-2 dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="bi bi-gear-fill fs-4 text-secondary"></i>
+                    <span class="fw-medium">@email</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm p-2">
+                    <li><a class="dropdown-item d-flex align-items-center gap-2" href="/Enforcer/Profile"><i class="bi bi-person-lines-fill"></i> Profile</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <form method="post" asp-controller="Account" asp-action="Logout" class="mb-0">
+                            <button type="submit" class="dropdown-item d-flex align-items-center gap-2 text-danger">
+                                <i class="bi bi-box-arrow-right"></i> Logout
+                            </button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar and Main Content -->
+    <div class="main-wrapper">
+        <div class="sidebar-container">
+            <ul class="nav flex-column">
+                <li><a href="/Enforcer/Dashboard" class="nav-link"><i class="bi bi-house-fill"></i> Home</a></li>
+                <li><a href="/Enforcer/Records" class="nav-link"><i class="bi bi-journal-text"></i> Management</a></li>
+                <li><a href="/Enforcer/LicenseVerification" class="nav-link active"><i class="bi bi-card-checklist"></i> Verification</a></li>
+                <li><a href="/Enforcer/EvidenceUpload" class="nav-link"><i class="bi bi-upload"></i> Evidence Upload</a></li>
+            </ul>
+        </div>
+
+        <div class="dashboard-content">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+            </div>
+
+            <div class="table-container">
+                <table class="table table-custom">
+                    <thead>
+                        <tr>
+                            <th>License ID</th>
+                            <th>User</th>
+                            <th>Type</th>
+                            <th>Issue</th>
+                            <th>Expiry</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var license in licenses)
+                        {
+                            <tr>
+                                <td>@license.license_id</td>
+                                <td>@license.User.firstname @license.User.lastname</td>
+                                <td>@license.type</td>
+                                <td>@license.issue_date.ToString("yyyy-MM-dd")</td>
+                                <td>@license.expiry_date.ToString("yyyy-MM-dd")</td>
+                                <td><span class="badge bg-@(license.status == "Active" ? "success" : license.status == "Inactive" ? "secondary" : "danger")">@license.status</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editLicenseModal-@license.license_id">
+                                        <i class="bi bi-pencil-square"></i> Edit
+                                    </button>
+                                </td>
+                            </tr>
+
+                            <!-- Edit Modal -->
+                            <div class="modal fade" id="editLicenseModal-@license.license_id" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <form method="post" asp-action="UpdateLicense">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Edit License</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <input type="hidden" name="license_id" value="@license.license_id" />
+                                                <div class="mb-3">
+                                                    <label>Status</label>
+                                                    <select name="status" class="form-control" required>
+                                                        <option value="Active" selected="@(license.status == "Active")">Active</option>
+                                                        <option value="Inactive" selected="@(license.status == "Inactive")">Inactive</option>
+                                                        <option value="Suspended" selected="@(license.status == "Suspended")">Suspended</option>
+                                                    </select>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label>Type</label>
+                                                    <select name="type" class="form-control" required>
+                                                        <option value="Student" selected="@(license.type == "Student")">Student</option>
+                                                        <option value="Non-Professional" selected="@(license.type == "Non-Professional")">Non-Professional</option>
+                                                        <option value="Professional" selected="@(license.type == "Professional")">Professional</option>
+                                                    </select>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label>Issue Date</label>
+                                                    <input type="date" name="issue_date" class="form-control" value="@license.issue_date.ToString("yyyy-MM-dd")" required />
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label>Expiry Date</label>
+                                                    <input type="date" name="expiry_date" class="form-control" value="@license.expiry_date.ToString("yyyy-MM-dd")" required />
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                <button type="submit" class="btn btn-success">Update</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        <tr>
+                            <td colspan="8">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <ul class="pagination mb-0">
+                                        @for (int i = 1; i <= totalPages; i++)
+                                        {
+                                            <li class="page-item @(i == page ? "active" : "")">
+                                                <a class="page-link" href="?page=@i">@i</a>
+                                            </li>
+                                        }
+                                    </ul>
+                                    <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRecordModal">+ Add New User</a>
+
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Modal -->
+    <div class="modal fade" id="addLicenseModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post" asp-action="AddLicense">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add New License</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3"><label>User ID</label><input type="text" name="user_id" class="form-control" required /></div>
+                        <div class="mb-3">
+                            <label>Type</label>
+                            <select name="type" class="form-control" required>
+                                <option value="Student">Student</option>
+                                <option value="Non-Professional">Non-Professional</option>
+                                <option value="Professional">Professional</option>
+                            </select>
+                        </div>
+                        <div class="mb-3"><label>Issue Date</label><input type="date" name="issue_date" class="form-control" required /></div>
+                        <div class="mb-3"><label>Expiry Date</label><input type="date" name="expiry_date" class="form-control" required /></div>
+                        <div class="mb-3">
+                            <label>Status</label>
+                            <select name="status" class="form-control" required>
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                                <option value="Suspended">Suspended</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary">Add License</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

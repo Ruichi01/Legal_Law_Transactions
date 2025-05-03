@@ -1,0 +1,266 @@
+﻿@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+@inject Legal_Law_Transactions.Models.ApplicationDbContext _context
+@using Microsoft.EntityFrameworkCore
+@using System.Linq;
+
+@{
+	var email = HttpContextAccessor.HttpContext.Session.GetString("UserEmail");
+	var currentUser = _context.Users.FirstOrDefault(u => u.email == email);
+
+	var documentQuery = _context.Documents
+		.Where(d => d.assigned_to_lawyer != null || d.assigned_to_citizen != null);
+
+	int pageSize = 10;
+	int page = Context.Request.Query["page"].Count > 0 ? int.Parse(Context.Request.Query["page"]) : 1;
+
+	int totalDocuments = documentQuery.Count();
+	int totalPages = (int)Math.Ceiling(totalDocuments / (double)pageSize);
+	var users = _context.Users.ToList();
+	var documents = documentQuery
+		.OrderByDescending(d => d.created_at)
+		.Skip((page - 1) * pageSize)
+		.Take(pageSize)
+		.ToList();
+
+	var lawyers = _context.Users.Where(u => u.role == "Lawyer").ToList();
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Prosecutor Documents</title>
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+<body>
+
+	<div class="container-fluid">
+		<div class="row">
+			<!-- Sidebar -->
+			<div class="col-md-3 col-lg-2 sidebar-container p-0 shadow-sm">
+				<div class="sidebar text-white bg-dark h-100 p-4">
+					<h4 class="mb-4 fw-bold text-center">Prosecutor</h4>
+					<ul class="nav flex-column">
+						<li class="nav-item mb-2">
+							<a href="/Prosecutor/Dashboard" class="nav-link text-white d-flex align-items-center gap-2">
+								<i class="bi bi-house-fill"></i> Home
+							</a>
+						</li>
+						<li class="nav-item mb-2">
+							<a href="/Prosecutor/Cases" class="nav-link text-white d-flex align-items-center gap-2">
+								<i class="bi bi-briefcase-fill"></i> Cases
+							</a>
+						</li>
+						<li class="nav-item mb-2">
+							<a href="/Prosecutor/Documents" class="nav-link text-white d-flex align-items-center gap-2">
+								<i class="bi bi-folder2-open"></i> Documents
+							</a>
+						</li>
+						<li class="nav-item mb-2">
+							<a href="/Prosecutor/Evidences" class="nav-link text-white d-flex align-items-center gap-2">
+								<i class="bi bi-file-earmark-text-fill"></i> Evidences
+							</a>
+						</li>
+						<li class="nav-item mb-2">
+							<a href="/Prosecutor/Schedules" class="nav-link text-white d-flex align-items-center gap-2">
+								<i class="bi bi-calendar-event"></i> Schedules
+							</a>
+						</li>
+					</ul>
+				</div>
+			</div>
+
+
+			<!-- Main Content -->
+			<div class="col-md-9 col-lg-10 p-4">
+				<div class="d-flex justify-content-between align-items-center mb-4">
+					<h2>Documents Assigned</h2>
+				</div>
+
+				<table class="table table-striped table-bordered">
+					<!-- Inside the table head -->
+					<thead class="table-dark">
+						<tr>
+							<th>File</th>
+							<th>Title</th>
+							<th>Status</th>
+							<th>Uploaded By</th>
+							<th>Assigned To Lawyer</th>
+							<th>Uploaded At</th>
+							<th>Last Modified</th>
+							<th>Document</th>
+							<th>Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+						@foreach (var document in documents)
+						{
+							<tr>
+								<td>
+									@if (!string.IsNullOrEmpty(document.file_path))
+									{
+										<a href="@Url.Action("ViewDocument", "Prosecutor", new { fileName = document.file_path.Substring(document.file_path.LastIndexOf("/") + 1) })" target="_blank" class="btn btn-outline-primary btn-sm">
+											View Document
+										</a>
+									}
+									else
+									{
+										<span>No File</span>
+									}
+								</td>
+
+								<td>@document.title</td>
+
+								<!-- Notarized status display -->
+								<td>
+									@(document.notarized == "Yes" ? "Signed" : "Not Signed")
+								</td>
+
+								<td>
+									@if (document.assigned_to_citizen != null)
+									{
+										var citizen = _context.Users.FirstOrDefault(u => u.user_id == document.assigned_to_citizen);
+										if (citizen != null)
+										{
+											@citizen.firstname @citizen.lastname
+										}
+										else
+										{
+											<span class="text-muted">Citizen not found</span>
+										}
+									}
+									else
+									{
+										<span class="text-muted">Not assigned yet</span>
+									}
+								</td>
+
+								<!-- Assigned to Lawyer -->
+								<td>
+									@if (document.assigned_to_lawyer != null)
+									{
+										var lawyer = _context.Users.FirstOrDefault(u => u.user_id == document.assigned_to_lawyer);
+										if (lawyer != null)
+										{
+											@lawyer.firstname @lawyer.lastname
+										}
+										else
+										{
+											<span class="text-muted">Lawyer not found</span>
+										}
+									}
+									else
+									{
+										<form method="post" asp-action="AssignLawyerToDocument">
+											<input type="hidden" name="documentId" value="@document.document_id" />
+											<select name="assignedToLawyer" class="form-control" required>
+												<option value="">Select Lawyer</option>
+												@foreach (var lawyer in lawyers)
+												{
+													<option value="@lawyer.user_id">@lawyer.firstname @lawyer.lastname</option>
+												}
+											</select>
+											<button type="submit" class="btn btn-primary mt-2">Assign Lawyer</button>
+										</form>
+									}
+								</td>
+
+								<td>@document.created_at</td>
+								<td>@document.last_modified</td>
+
+								<!-- Sign Document Button -->
+								<td>
+									<form method="post" asp-action="SignDocument">
+										<input type="hidden" name="documentId" value="@document.document_id" />
+										<button type="submit" class="btn btn-success btn-sm">
+											<i class="bi bi-pen-fill"></i> Sign Document
+										</button>
+									</form>
+								</td>
+
+								<!-- Edit Button & Modal -->
+								<td>
+									<button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editModal-@document.document_id">
+										Edit
+									</button>
+
+									<div class="modal fade" id="editModal-@document.document_id" tabindex="-1" aria-labelledby="editModalLabel-@document.document_id" aria-hidden="true">
+										<div class="modal-dialog modal-lg">
+											<div class="modal-content">
+												<form method="post" asp-action="UpdateDocument" enctype="multipart/form-data">
+													<input type="hidden" name="documentId" value="@document.document_id" />
+													<div class="modal-header">
+														<h5 class="modal-title" id="editModalLabel-@document.document_id">Edit Document</h5>
+														<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+													</div>
+
+													<div class="modal-body">
+														<!-- Lawyer Dropdown -->
+														<div class="mb-3">
+															<label class="form-label">Assign Lawyer</label>
+															<select name="assignedToLawyer" class="form-select" required>
+																<option value="">Select a Lawyer</option>
+																@foreach (var user in users.Where(u => u.role == "Lawyer"))
+																{
+																	<option value="@user.user_id" selected="@(user.user_id == document.assigned_to_lawyer)">
+																		@user.firstname @user.lastname
+																	</option>
+																}
+															</select>
+														</div>
+
+														<!-- Notarized Status -->
+														<div class="mb-3">
+															<label class="form-label">Status</label>
+															<select name="notarized" class="form-select">
+																<option value="Yes" selected="@(document.notarized == "Yes")">Signed</option>
+																<option value="No" selected="@(document.notarized != "Yes")">Not Signed</option>
+															</select>
+														</div>
+
+														<!-- File Upload -->
+														<div class="mb-3">
+															<label class="form-label">Replace Document</label>
+															<input type="file" name="newFile" class="form-control" accept=".pdf,.docx,.jpg,.png" />
+														</div>
+													</div>
+
+													<div class="modal-footer">
+														<button type="submit" class="btn btn-success">Save Changes</button>
+														<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+													</div>
+												</form>
+											</div>
+										</div>
+									</div>
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+
+				<!-- Pagination -->
+				<div class="d-flex justify-content-between align-items-center">
+					<ul class="pagination mb-0">
+						@for (int i = 1; i <= totalPages; i++)
+						{
+							<li class="page-item @(i == page ? "active" : "")">
+								<a class="page-link" href="@Url.Action("Documents", "Prosecutor", new { page = i })">@i</a>
+							</li>
+						}
+					</ul>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<footer class="bg-light text-muted py-2 mt-5" style="font-size: 0.9rem;">
+		<div class="container text-center">
+			&copy; 2025 - Legal_Law_Transactions. All rights reserved.
+		</div>
+	</footer>
+
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

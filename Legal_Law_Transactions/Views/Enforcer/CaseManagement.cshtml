@@ -1,0 +1,226 @@
+﻿@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+@inject Legal_Law_Transactions.Models.ApplicationDbContext _context
+@using Microsoft.EntityFrameworkCore
+
+@{
+    ViewData["Title"] = "Case Management";
+
+    int page = Convert.ToInt32(Context.Request.Query["page"]);
+    if (page < 1) page = 1;
+
+    int pageSize = 10;
+    var totalCases = _context.Cases.Count();
+    int totalPages = (int)Math.Ceiling(totalCases / (double)pageSize);
+    var users = _context.Users.ToList();
+
+    var cases = _context.Cases
+       .OrderBy(c => c.case_id)
+       .Skip((page - 1) * pageSize)
+       .Take(pageSize)
+       .Include(c => c.User) 
+       .ToList();
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 col-lg-2 sidebar-container p-0 shadow-sm">
+            <div class="sidebar text-white h-100 p-4">
+                <h4 class="mb-4 fw-bold text-center">Law Enforcer</h4>
+                <ul class="nav flex-column">
+                    <li class="nav-item mb-2">
+                        <a href="/Enforcer/Dashboard" class="nav-link text-white d-flex align-items-center gap-2">
+                            <i class="bi bi-house-fill"></i> Home
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a href="/Enforcer/Records" class="nav-link text-white d-flex align-items-center gap-2">
+                            <i class="bi bi-journal-text"></i> Record Management
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a href="/Enforcer/LicenseVerification" class="nav-link text-white d-flex align-items-center gap-2">
+                            <i class="bi bi-card-checklist"></i> License Verification
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a href="/Enforcer/EvidenceUpload" class="nav-link text-white d-flex align-items-center gap-2">
+                            <i class="bi bi-upload"></i> Evidence Upload
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a href="/Enforcer/CaseManagement" class="nav-link text-white d-flex align-items-center gap-2">
+                            <i class="bi bi-briefcase-fill"></i> Case Overview
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <!-- Main Content -->
+        <div class="col-md-9 col-lg-10 p-4">
+            <h2 class="mb-4">Case Management</h2>
+
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Assigned Lawyer</th>
+                            <th>Assigned Citizen</th>
+                            <th>Case Number</th>
+                            <th>Description</th>
+                            <th>Status</th>
+                            <th>Court Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var caseItem in cases)
+                        {
+                            var lawyer = users.FirstOrDefault(u => u.user_id == caseItem.assigned_to_lawyer);
+                            var citizen = users.FirstOrDefault(u => u.user_id == caseItem.assigned_to_citizen);
+
+                            <tr>
+                                <td>@(lawyer != null ? lawyer.firstname + " " + lawyer.lastname : "N/A")</td>
+                                <td>@(citizen != null ? citizen.firstname + " " + citizen.lastname : "N/A")</td>
+                                <td>@caseItem.case_number</td>
+                                <td>@caseItem.description</td>
+                                <td>@caseItem.status</td>
+                                <td>@caseItem.court_date.ToString("yyyy-MM-dd")</td>
+                                <td>
+                                    <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editCaseModal-@caseItem.case_id">Edit</button>
+                                </td>
+                            </tr>
+
+                            <!-- Edit Case Modal -->
+                            <div class="modal fade" id="editCaseModal-@caseItem.case_id" tabindex="-1" aria-labelledby="editCaseModalLabel-@caseItem.case_id" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <form method="post" asp-action="UpdateCase">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Edit Case</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <input type="hidden" name="case_id" value="@caseItem.case_id" />
+                                                <div class="mb-3">
+                                                    <label>Assigned Lawyer</label>
+                                                    <select name="assigned_to_lawyer" class="form-control" required>
+                                                        @foreach (var user in users.Where(u => u.role == "Lawyer"))
+                                                        {
+                                                            <option value="@user.user_id" selected="@(user.user_id == caseItem.assigned_to_lawyer)">
+                                                                @user.firstname @user.lastname
+                                                            </option>
+                                                        }
+                                                    </select>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label>Assigned Citizen</label>
+                                                    <select name="assigned_to_citizen" class="form-control" required>
+                                                        @foreach (var user in users.Where(u => u.role == "Citizen"))
+                                                        {
+                                                            <option value="@user.user_id" selected="@(user.user_id == caseItem.assigned_to_citizen)">
+                                                                @user.firstname @user.lastname
+                                                            </option>
+                                                        }
+                                                    </select>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label>Status</label>
+                                                    <select name="status" class="form-control" required>
+                                                        <option value="Under Investigation" selected="@(caseItem.status == "Under Investigation")">Under Investigation</option>
+                                                        <option value="In Trial" selected="@(caseItem.status == "In Trial")">In Trial</option>
+                                                        <option value="Pending" selected="@(caseItem.status == "Pending")">Pending</option>
+                                                        <option value="Dismissed " selected="@(caseItem.status == "Dismissed ")">Dismissed </option>
+                                                        <option value="Convicted " selected="@(caseItem.status == "Convicted ")">Convicted </option>
+                                                        <option value="Acquitted" selected="@(caseItem.status == "Acquitted")">Acquitted</option>
+                                                    </select>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label>Court Date</label>
+                                                    <input type="date" name="court_date" class="form-control" value="@caseItem.court_date.ToString("yyyy-MM-dd")" required />
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                <button type="submit" class="btn btn-success">Update</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </tbody>
+                </table>
+
+                <!-- Pagination -->
+                <div class="d-flex justify-content-between align-items-center">
+                    <ul class="pagination mb-0">
+                        @for (int i = 1; i <= totalPages; i++)
+                        {
+                            <li class="page-item @(i == page ? "active" : "")">
+                                <a class="page-link" href="?page=@i">@i</a>
+                            </li>
+                        }
+                    </ul>
+                    <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCaseModal">+ Add New Case</a>
+                </div>
+
+                <!-- Add Case Modal -->
+                <div class="modal fade" id="addCaseModal" tabindex="-1" aria-labelledby="addCaseModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="addCaseModalLabel">Add New Case</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <form method="post" asp-action="AddCase">
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label>Assigned Lawyer</label>
+                                        <select name="assigned_to_lawyer" class="form-control" required>
+                                            @foreach (var user in users.Where(u => u.role == "Lawyer"))
+                                            {
+                                                <option value="@user.user_id">@user.firstname @user.lastname</option>
+                                            }
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label>Assigned Citizen</label>
+                                        <select name="assigned_to_citizen" class="form-control" required>
+                                            @foreach (var user in users.Where(u => u.role == "Citizen"))
+                                            {
+                                                <option value="@user.user_id">@user.firstname @user.lastname</option>
+                                            }
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label>Case Number</label>
+                                        <input type="text" class="form-control" value="Auto-generated upon saving" disabled />
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label>Description</label>
+                                        <textarea name="description" class="form-control" required></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label>Court Date</label>
+                                        <input type="date" name="court_date" class="form-control" required />
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    <button type="submit" class="btn btn-primary">Add Case</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
