@@ -4,21 +4,10 @@
 
 @{
     var email = HttpContextAccessor.HttpContext.Session.GetString("UserEmail");
-    ViewData["Title"] = "Admin Logs";
-
-    int page = Convert.ToInt32(Context.Request.Query["page"]);
-    if (page < 1) page = 1;
-
-    int pageSize = 10;
-    var totalLogs = _context.AdminLogs.Count();
-    int totalPages = (int)Math.Ceiling(totalLogs / (double)pageSize);
-
-    var paginatedLogs = _context.AdminLogs
-        .OrderByDescending(log => log.Timestamp)
-        .Skip((page - 1) * pageSize)
-        .Take(pageSize)
-        .ToList();
+    int page = ViewBag.CurrentPage ?? 1;
+    int totalPages = ViewBag.TotalPages ?? 1;
 }
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -84,11 +73,13 @@
                 <li><a href="/Admin/Cases" class="nav-link"><i class="bi bi-briefcase-fill"></i> Cases</a></li>
                 <li><a href="/Admin/Schedules" class="nav-link"><i class="bi bi-calendar-week"></i> Schedules</a></li>
                 <li><a href="/Admin/Logs" class="nav-link active"><i class="bi bi-list-ul"></i> Logs</a></li>
+                <li><a href="/Admin/Application" class="nav-link"><i class="bi bi-file-earmark-text"></i> Application</a></li>
+                <li><a href="/Admin/Evidence" class="nav-link"><i class="bi bi-folder2-open"></i> Evidence</a></li>
             </ul>
         </div>
 
         <!-- Main Content -->
-        <div class="dashboard-content">
+        <div class="dashboard-content" style="margin-left: 80px; margin-top: 60px;">
             <div class="table-container">
                 <table class="table table-custom">
                     <thead>
@@ -101,7 +92,8 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var log in paginatedLogs)
+                        @foreach (var log in Model)
+
                         {
                             <tr>
                                 <td>@log.log_id</td>

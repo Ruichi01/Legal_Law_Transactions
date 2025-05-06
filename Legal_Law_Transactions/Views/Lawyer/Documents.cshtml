@@ -83,7 +83,7 @@
                     <span class="fw-medium">@email</span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow-sm p-2">
-                    <li><a class="dropdown-item d-flex align-items-center gap-2" href="/Enforcer/Profile"><i class="bi bi-person-lines-fill"></i> Profile</a></li>
+                    <li><a class="dropdown-item d-flex align-items-center gap-2" href="/Lawyer/Profile"><i class="bi bi-person-lines-fill"></i> Profile</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li>
                         <form method="post" asp-controller="Account" asp-action="Logout" class="mb-0">
@@ -102,16 +102,16 @@
         <div class="sidebar-container">
             <ul class="nav flex-column">
                 <li><a href="/Lawyer/Dashboard" class="nav-link "><i class="bi bi-house-fill"></i> Home</a></li>
-                <li><a href="/Lawyer/Documents" class="nav-link active"><i class="bi bi-clipboard-data"></i> Docments</a></li>
+                <li><a href="/Lawyer/Documents" class="nav-link active"><i class="bi bi-clipboard-data"></i> Documents</a></li>
                 <li><a href="/Lawyer/Evidences" class="nav-link"><i class="bi bi-briefcase-fill"></i> Evidences</a></li>
-                <li><a href="/Lawyer/MyCases" class="nav-link "><i class="bi bi-file-earmark-text-fill"></i> MyCases</a></li>
+                <li><a href="/Lawyer/MyCases" class="nav-link "><i class="bi bi-file-earmark-text-fill"></i> Handled Cases</a></li>
                 <li><a href="/Lawyer/Schedules" class="nav-link "><i class="bi bi-award-fill"></i> Schedules</a></li>
             </ul>
         </div>
     </div>
 
-        <div class="dashboard-content">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="dashboard-content" style="margin-left: 80px; margin-top: 60px;">
+        <div class="d-flex justify-content-between align-items-center mb-3">
             </div>
 
             <div class="table-container">
@@ -168,7 +168,7 @@
                         </td>
                     </tr>
                     </tbody>
-                </table>>
+                </table>
             </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>

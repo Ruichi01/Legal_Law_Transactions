@@ -22,8 +22,10 @@
 
   <ItemGroup>
     <Folder Include="Migrations\" />
+    <Folder Include="Views\Pending\" />
     <Folder Include="wwwroot\evidence\" />
     <Folder Include="wwwroot\documents\" />
+    <Folder Include="wwwroot\application\" />
   </ItemGroup>
 
 </Project>

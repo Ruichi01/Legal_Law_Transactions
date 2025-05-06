@@ -5,10 +5,11 @@
     var email = HttpContextAccessor.HttpContext.Session.GetString("UserEmail");
     var currentUser = _context.Users.FirstOrDefault(u => u.email == email);
 
-    var caseCount = _context.Cases.Count(c => c.user_id == currentUser.user_id);
-    var documentCount = _context.Documents.Count(d => d.user_id == currentUser.user_id);
-    var scheduleCount = _context.Schedules.Count(s => s.case_id == currentUser.user_id);
-    var evidenceCount = _context.Records.Count(r => r.user_id == currentUser.user_id); // Records renamed conceptually to Evidences
+    var caseCount = _context.Cases.Count(c => c.assigned_to_lawyer == currentUser.user_id);
+    var documentCount = _context.Documents.Count(d => d.assigned_to_lawyer == currentUser.user_id);
+    var scheduleCount = _context.Schedules.Count(s => s.assigned_to_lawyer == currentUser.user_id);
+    var evidenceCount = _context.Evidences.Count(e => e.assigned_to_lawyer == currentUser.user_id);
+
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -46,7 +47,7 @@
                     <span class="fw-medium">@email</span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow-sm p-2">
-                    <li><a class="dropdown-item d-flex align-items-center gap-2" href="/Enforcer/Profile"><i class="bi bi-person-lines-fill"></i> Profile</a></li>
+                    <li><a class="dropdown-item d-flex align-items-center gap-2" href="/Lawyer/Profile"><i class="bi bi-person-lines-fill"></i> Profile</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li>
                         <form method="post" asp-controller="Account" asp-action="Logout" class="mb-0">
@@ -65,15 +66,15 @@
         <div class="sidebar-container">
             <ul class="nav flex-column">
                 <li><a href="/Lawyer/Dashboard" class="nav-link active"><i class="bi bi-house-fill"></i> Home</a></li>
-                <li><a href="/Lawyer/Documents" class="nav-link"><i class="bi bi-clipboard-data"></i> Docments</a></li>
+                <li><a href="/Lawyer/Documents" class="nav-link"><i class="bi bi-clipboard-data"></i> Documents</a></li>
                 <li><a href="/Lawyer/Evidences" class="nav-link"><i class="bi bi-briefcase-fill"></i> Evidences</a></li>
-                <li><a href="/Lawyer/MyCases" class="nav-link "><i class="bi bi-file-earmark-text-fill"></i> MyCases</a></li>
+                <li><a href="/Lawyer/MyCases" class="nav-link "><i class="bi bi-file-earmark-text-fill"></i> Handled Cases</a></li>
                 <li><a href="/Lawyer/Schedules" class="nav-link "><i class="bi bi-award-fill"></i> Schedules</a></li>
             </ul>
         </div>
     </div>
 
-    <div class="dashboard-content p-4" style="margin-left: 130px; margin-top: -5px;">
+    <div class="dashboard-content p-4" style="margin-left: 130px; margin-top: 90px;">
         <h3 class="mb-4 fw-semibold">Welcome, <span class="text-primary">@currentUser?.firstname</span>!</h3>
 
         <div class="mb-4">
@@ -145,5 +146,6 @@
             </div>
         </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

@@ -19,6 +19,7 @@ namespace Legal_Law_Transactions.Models
         public DbSet<AdminLog> AdminLogs { get; set; }
         public DbSet<Evidence> Evidences { get; set; }
         public DbSet<SessionLog> SessionLogs { get; set; }
+        public DbSet<Application> Applications { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -93,6 +94,14 @@ namespace Legal_Law_Transactions.Models
                 .WithMany()
                 .HasForeignKey(e => e.case_id)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // === Application Defaults ===
+            modelBuilder.Entity<Application>()
+                .Property(a => a.status)
+                .HasDefaultValue("Pending");
+
         }
+
+
     }
 }

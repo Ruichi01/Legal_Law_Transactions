@@ -7,6 +7,7 @@ using Dropbox.Sign.Api;
 using Dropbox.Sign.Model;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 
 namespace Legal_Law_Transactions.Controllers
 {
@@ -16,11 +17,16 @@ namespace Legal_Law_Transactions.Controllers
         private readonly ApplicationDbContext _context;
         private readonly IConfiguration _configuration;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IPasswordHasher<User> _passwordHasher;
 
-        public ProsecutorController(ApplicationDbContext context, IConfiguration configuration)
+
+        public ProsecutorController(ApplicationDbContext context, IConfiguration configuration, IWebHostEnvironment webHostEnvironment, IPasswordHasher<User> passwordHasher)
         {
             _context = context;
             _configuration = configuration;
+            _webHostEnvironment = webHostEnvironment;
+            _passwordHasher = passwordHasher;
+
         }
 
         public IActionResult Dashboard()
@@ -33,7 +39,17 @@ namespace Legal_Law_Transactions.Controllers
             var cases = _context.Cases.ToList();
             return View(cases);
         }
+        public IActionResult Profile()
+        {
+            var firstName = HttpContext.Session.GetString("UserFirstName");
+            var lastName = HttpContext.Session.GetString("UserLastName");
+            var email = HttpContext.Session.GetString("UserEmail");
 
+            ViewBag.FullName = $"{firstName} {lastName}";
+            ViewBag.Email = email;
+
+            return View();
+        }
         public IActionResult Documents(int page = 1)
         {
             int pageSize = 10;
@@ -57,22 +73,52 @@ namespace Legal_Law_Transactions.Controllers
         }
 
         [HttpPost]
-        public IActionResult AssignLawyerToDocument(int documentId, int assignedToLawyer)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AssignLawyerToDocument(int documentId, int assignedToLawyer, string notarized, IFormFile? newFile)
         {
-            var document = _context.Documents.FirstOrDefault(d => d.document_id == documentId);
-
-            if (document != null && _context.Users.Any(u => u.user_id == assignedToLawyer && u.role == "Lawyer"))
+            var document = await _context.Documents.FindAsync(documentId);
+            if (document == null)
             {
-                document.assigned_to_lawyer = assignedToLawyer;
-                _context.SaveChanges();
-
-                TempData["SuccessMessage"] = "Document has been assigned to the lawyer successfully.";
-            }
-            else
-            {
-                TempData["ErrorMessage"] = "Invalid lawyer selection or document not found.";
+                TempData["ErrorMessage"] = "Document not found.";
+                return RedirectToAction("Documents");
             }
 
+            document.assigned_to_lawyer = assignedToLawyer;
+            document.notarized = notarized;
+
+            if (newFile != null)
+            {
+                var extension = Path.GetExtension(newFile.FileName).ToLowerInvariant();
+                if (extension != ".pdf" || newFile.ContentType != "application/pdf")
+                {
+                    TempData["ErrorMessage"] = "Only PDF files are allowed.";
+                    return RedirectToAction("Documents");
+                }
+
+                if (!string.IsNullOrEmpty(document.file_path))
+                {
+                    var oldPath = Path.Combine("wwwroot", document.file_path.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                    if (System.IO.File.Exists(oldPath))
+                    {
+                        System.IO.File.Delete(oldPath);
+                    }
+                }
+
+                var fileName = Guid.NewGuid() + ".pdf";
+                var savePath = Path.Combine("wwwroot/documents", fileName);
+
+                using (var stream = new FileStream(savePath, FileMode.Create))
+                {
+                    await newFile.CopyToAsync(stream);
+                }
+
+                document.file_path = "/documents/" + fileName;
+            }
+
+            _context.Documents.Update(document);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Document updated successfully.";
             return RedirectToAction("Documents");
         }
 
@@ -266,6 +312,7 @@ namespace Legal_Law_Transactions.Controllers
 
                 _context.SaveChanges();
             }
+            TempData["SuccessMessage"] = "Case updated successfully.";
 
             return RedirectToAction("Cases");
         }
@@ -325,51 +372,43 @@ namespace Legal_Law_Transactions.Controllers
             var fileBytes = System.IO.File.ReadAllBytes(filePath);
             return File(fileBytes, "application/octet-stream", fileName);
         }
-        public async Task<IActionResult> UpdateDocument(int DocumentId, string notarized, IFormFile newFile)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ChangePassword(string CurrentPassword, string NewPassword, string ConfirmPassword)
         {
-            var document = await _context.Documents.FindAsync(DocumentId);
-            if (document == null)
+            if (NewPassword != ConfirmPassword)
             {
-                return NotFound();
+                TempData["Error"] = "New password and confirmation do not match.";
+                return RedirectToAction("Profile", "Prosecutor");
             }
 
-            if (newFile != null && newFile.Length > 0)
+            var userIdString = HttpContext.Session.GetString("UserId");
+            if (!int.TryParse(userIdString, out int userId))
             {
-                var documentsPath = Path.Combine("wwwroot", "documents");
-
-                if (!Directory.Exists(documentsPath))
-                {
-                    Directory.CreateDirectory(documentsPath);
-                }
-
-                var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(newFile.FileName);
-                var newFilePath = Path.Combine(documentsPath, uniqueFileName);
-
-                using (var fileStream = new FileStream(newFilePath, FileMode.Create))
-                {
-                    await newFile.CopyToAsync(fileStream);
-                }
-
-                if (!string.IsNullOrEmpty(document.file_path))
-                {
-                    var oldFilePath = Path.Combine("wwwroot", document.file_path.Replace('/', Path.DirectorySeparatorChar));
-                    if (System.IO.File.Exists(oldFilePath))
-                    {
-                        System.IO.File.Delete(oldFilePath);
-                    }
-                }
-
-                document.file_path = Path.Combine("documents", uniqueFileName).Replace('\\', '/');
+                TempData["Error"] = "User session not found.";
+                return RedirectToAction("Login", "Prosecutor");
             }
 
-            document.notarized = notarized;
-            document.last_modified = DateTime.Now;
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                TempData["Error"] = "User not found.";
+                return RedirectToAction("Login", "Account");
+            }
 
-            _context.Update(document);
+            var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.password, CurrentPassword);
+            if (verificationResult == PasswordVerificationResult.Failed)
+            {
+                TempData["Error"] = "Current password is incorrect.";
+                return RedirectToAction("Profile", "Prosecutor");
+            }
+
+            user.password = _passwordHasher.HashPassword(user, NewPassword);
+            _context.Users.Update(user);
             await _context.SaveChangesAsync();
 
-            return RedirectToAction("Documents");
+            TempData["SuccessMessage"] = "Password changed successfully.";
+            return RedirectToAction("Profile", "Prosecutor");
         }
-
     }
 }

@@ -1,6 +1,6 @@
 body {
     font-family: 'Poppins', sans-serif;
-    background-color: #f4f5f7;
+    background-color: white !important;
 }
 
 .navbar-custom {
@@ -66,18 +66,19 @@ body {
 }
 
 .table-custom {
-    border-collapse: separate;
+    border-collapse: collapse;
     border-spacing: 0;
     width: 100%;
-    background-color: #fff;
+    background-color: #ffffff;
     border-radius: 0;
     overflow: hidden;
     box-shadow: 0 3px 10px rgba(0,0,0,0.05);
     font-size: 1rem;
+    border: none;
 }
 
     .table-custom thead {
-        background-color: #007bff;
+        background-color: transparent;
         color: white;
         font-weight: 600;
     }
@@ -87,7 +88,7 @@ body {
         vertical-align: middle;
         padding: 16px;
         text-align: center;
-        border-bottom: 1px solid #eee;
+        border-bottom: 1px solid #ffffff;
     }
 
     .table-custom tbody tr:hover {
@@ -174,7 +175,7 @@ body {
         width: 260px;
         height: 100vh;
         position: fixed;
-        top: 80px; /* below the navbar */
+        top: 80px; 
         left: 0;
         background-color: white;
         border-right: 1px solid #ddd;
@@ -242,6 +243,7 @@ body {
         }
 
         }
+
 }
 
 }

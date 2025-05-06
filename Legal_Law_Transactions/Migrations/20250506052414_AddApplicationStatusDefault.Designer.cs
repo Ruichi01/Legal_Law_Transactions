@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Legal_Law_Transactions.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250428171236_AddEvidenceTable")]
-    partial class AddEvidenceTable
+    [Migration("20250506052414_AddApplicationStatusDefault")]
+    partial class AddApplicationStatusDefault
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -58,6 +58,37 @@ namespace Legal_Law_Transactions.Migrations
                     b.ToTable("AdminLogs");
                 });
 
+            modelBuilder.Entity("Legal_Law_Transactions.Models.Application", b =>
+                {
+                    b.Property<int>("application_id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("application_id"));
+
+                    b.Property<string>("file_path")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("nvarchar(max)")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<DateTime>("submitted_at")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("user_id")
+                        .HasColumnType("int");
+
+                    b.HasKey("application_id");
+
+                    b.HasIndex("user_id");
+
+                    b.ToTable("Applications");
+                });
+
             modelBuilder.Entity("Legal_Law_Transactions.Models.Case", b =>
                 {
                     b.Property<int>("case_id")
@@ -65,6 +96,12 @@ namespace Legal_Law_Transactions.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("case_id"));
+
+                    b.Property<int>("assigned_to_citizen")
+                        .HasColumnType("int");
+
+                    b.Property<int>("assigned_to_lawyer")
+                        .HasColumnType("int");
 
                     b.Property<string>("case_number")
                         .IsRequired()
@@ -101,6 +138,12 @@ namespace Legal_Law_Transactions.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("document_id"));
+
+                    b.Property<int>("assigned_to_citizen")
+                        .HasColumnType("int");
+
+                    b.Property<int>("assigned_to_lawyer")
+                        .HasColumnType("int");
 
                     b.Property<string>("content")
                         .IsRequired()
@@ -141,6 +184,12 @@ namespace Legal_Law_Transactions.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("evidence_id"));
+
+                    b.Property<int>("assigned_to_citizen")
+                        .HasColumnType("int");
+
+                    b.Property<int>("assigned_to_lawyer")
+                        .HasColumnType("int");
 
                     b.Property<int>("case_id")
                         .HasColumnType("int");
@@ -253,6 +302,12 @@ namespace Legal_Law_Transactions.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("schedule_id"));
 
+                    b.Property<int>("assigned_to_citizen")
+                        .HasColumnType("int");
+
+                    b.Property<int>("assigned_to_lawyer")
+                        .HasColumnType("int");
+
                     b.Property<int>("case_id")
                         .HasColumnType("int");
 
@@ -272,6 +327,34 @@ namespace Legal_Law_Transactions.Migrations
                     b.HasIndex("case_id");
 
                     b.ToTable("Schedules");
+                });
+
+            modelBuilder.Entity("Legal_Law_Transactions.Models.SessionLog", b =>
+                {
+                    b.Property<int>("SessionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SessionId"));
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("SessionTimestamp")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("SessionId");
+
+                    b.ToTable("SessionLogs");
                 });
 
             modelBuilder.Entity("Legal_Law_Transactions.Models.Signature", b =>
@@ -332,6 +415,10 @@ namespace Legal_Law_Transactions.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("user_id");
 
                     b.ToTable("Users");
@@ -346,6 +433,17 @@ namespace Legal_Law_Transactions.Migrations
                         .IsRequired();
 
                     b.Navigation("Admin");
+                });
+
+            modelBuilder.Entity("Legal_Law_Transactions.Models.Application", b =>
+                {
+                    b.HasOne("Legal_Law_Transactions.Models.User", "User")
+                        .WithMany("Applications")
+                        .HasForeignKey("user_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Legal_Law_Transactions.Models.Case", b =>
@@ -456,6 +554,8 @@ namespace Legal_Law_Transactions.Migrations
 
             modelBuilder.Entity("Legal_Law_Transactions.Models.User", b =>
                 {
+                    b.Navigation("Applications");
+
                     b.Navigation("Cases");
 
                     b.Navigation("Documents");

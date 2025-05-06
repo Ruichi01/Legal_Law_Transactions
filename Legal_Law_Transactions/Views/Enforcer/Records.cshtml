@@ -17,6 +17,16 @@
         .Skip((page - 1) * pageSize)
         .Take(pageSize)
         .ToList();
+
+    string GetStatusBadgeClass(string status) => status switch
+    {
+        "Pending" => "text-bg-primary",
+        "Resolved" => "text-bg-success",
+        "Closed" => "text-bg-danger",
+        "Open" => "text-bg-success",
+        "Arrested" => "text-bg-secondary",
+        _ => "text-bg-secondary"
+    };
 }
 
 <!DOCTYPE html>
@@ -80,7 +90,15 @@
             </ul>
         </div>
 
-        <div class="dashboard-content">
+        <div class="dashboard-content" style="margin-left: 80px; margin-top: 60px;">
+            @if (TempData["ErrorMessage"] != null)
+		{
+			<div class="alert alert-danger" style="margin-left: 30px; margin-top: 40px;">@TempData["ErrorMessage"]</div>
+		}
+		@if (TempData["SuccessMessage"] != null)
+		{
+			<div class="alert alert-success" style="margin-left: 30px; margin-top: 40px;">@TempData["SuccessMessage"]</div>
+		}
             <div class="d-flex justify-content-between align-items-center mb-3">
             </div>
 
@@ -88,9 +106,8 @@
                 <table class="table table-custom">
                     <thead>
                         <tr>
-                            <th>Record ID</th>
-                            <th>User ID</th>
-                            <th>Case ID</th>
+                            <th>Citizen Name</th>
+                            <th>Case Number</th>
                             <th>Offense Type</th>
                             <th>Date of Offense</th>
                             <th>Status</th>
@@ -102,16 +119,15 @@
                         @foreach (var record in records)
                         {
                             <tr>
-                                <td>@record.record_id</td>
-                                <td>@record.user_id</td>
-                                <td>@record.case_id</td>
+                                @{
+                                    var user = _context.Users.FirstOrDefault(u => u.user_id == record.user_id);
+                                }
+                                <td>@($"{user?.firstname} {user?.lastname}")</td>
+
+                                <td>@_context.Cases.FirstOrDefault(c => c.case_id == record.case_id)?.case_number</td>
                                 <td>@record.offense_type</td>
                                 <td>@record.date_of_offense.ToString("yyyy-MM-dd")</td>
-                                <td>
-                                    <span class="badge bg-@(record.status == "Closed" ? "success" : "warning") text-dark">
-                                        @record.status
-                                    </span>
-                                </td>
+                                <td><span class="badge @GetStatusBadgeClass(record.status)">@record.status</span></td>
                                 <td>@record.last_updated.ToString("yyyy-MM-dd HH:mm")</td>
                                 <td>
                                     <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editRecordModal-@record.record_id">
@@ -135,18 +151,23 @@
                                                     <label>User ID</label>
                                                     <select id="userIdDropdown-@record.record_id" name="user_id" class="form-control" onchange="fetchAssociatedCases('@record.record_id', this.value)" required>
                                                         <option value="">Select User</option>
-                                                        @foreach (var user in ViewBag.Users as List<Legal_Law_Transactions.Models.User>)
+                                                        @foreach (var u in ViewBag.Users as List<Legal_Law_Transactions.Models.User>)
                                                         {
-                                                            <option value="@user.user_id" selected="@(user.user_id == record.user_id)">
-                                                                @user.firstname @user.lastname
+                                                            <option value="@u.user_id" selected="@(u.user_id == record.user_id)">
+                                                                @u.firstname @u.lastname
                                                             </option>
-
                                                         }
+
                                                     </select>
                                                 </div>
                                                 <div class="mb-3">
                                                     <label>Case ID</label>
-                                                    <select id="caseIdDropdown-@record.record_id" name="case_id" class="form-control" required>
+                                                    <select id="caseIdDropdown-@record.record_id"
+                                                            name="case_id"
+                                                            class="form-control"
+                                                            required
+                                                            data-current-case-id="@record.case_id">
+
                                                         <option value="">Select Case</option>
                                                         @foreach (var caseItem in ViewBag.Cases as List<Legal_Law_Transactions.Models.Case>)
                                                         {
@@ -196,7 +217,7 @@
                                             </li>
                                         }
                                     </ul>
-                                    <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRecordModal">+ Add New User</a>
+                                    <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRecordModal">+ Add Case</a>
 
                                 </div>
                             </td>
@@ -250,41 +271,63 @@
         </div>
     </div>
 
-    <script>
-        function fetchAssociatedCases(recordId, userId) {
-            let caseDropdown = document.getElementById(recordId ? "caseIdDropdown-" + recordId : "caseIdDropdown");
-            caseDropdown.innerHTML = "<option value=''>Select Case</option>";
-            if (userId) {
-                fetch('/Enforcer/GetCasesForUser?userId=' + userId)
-                    .then(response => response.json())
-                    .then(data => {
-                        data.forEach(caseItem => {
-                            let option = document.createElement("option");
-                            option.value = caseItem.case_id;
-                            option.textContent = caseItem.case_number + " - " + caseItem.description;
-                            caseDropdown.appendChild(option);
+        <script>
+            function fetchAssociatedCases(recordId, userId, selectedCaseId = null) {
+                const caseDropdown = document.getElementById(recordId ? "caseIdDropdown-" + recordId : "caseIdDropdown");
+                if (!caseDropdown) return;
+
+                // Clear dropdown completely
+                while (caseDropdown.firstChild) {
+                    caseDropdown.removeChild(caseDropdown.firstChild);
+                }
+
+                // Add default option
+                const defaultOption = document.createElement("option");
+                defaultOption.value = "";
+                defaultOption.textContent = "Select Case";
+                caseDropdown.appendChild(defaultOption);
+
+                if (userId) {
+                    fetch('/Enforcer/GetCasesForUser?userId=' + userId)
+                        .then(response => response.json())
+                        .then(data => {
+                            caseDropdown.innerHTML = "<option value=''>Select Case</option>"; // Reset again in case fetch is slow
+                            data.forEach(caseItem => {
+                                const option = document.createElement("option");
+                                option.value = caseItem.case_id;
+                                option.textContent = caseItem.case_number + " - " + caseItem.description;
+
+                                if (selectedCaseId && parseInt(caseItem.case_id) === parseInt(selectedCaseId)) {
+                                    option.selected = true;
+                                }
+
+                                caseDropdown.appendChild(option);
+                            });
                         });
-                    });
+                }
             }
-        }
-    </script>
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const modals = document.querySelectorAll("[id^='editRecordModal-']");
+        </script>
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                const modals = document.querySelectorAll("[id^='editRecordModal-']");
 
-            modals.forEach(modal => {
-                modal.addEventListener("show.bs.modal", function () {
-                    const recordId = this.id.split("-")[1];
-                    const userDropdown = document.getElementById("userIdDropdown-" + recordId);
-                    const userId = userDropdown ? userDropdown.value : null;
+                modals.forEach(modal => {
+                    modal.addEventListener("show.bs.modal", function () {
+                        const recordId = this.id.split("-")[1];
+                        const userDropdown = document.getElementById("userIdDropdown-" + recordId);
+                        const caseDropdown = document.getElementById("caseIdDropdown-" + recordId);
 
-                    if (userId) {
-                        fetchAssociatedCases(recordId, userId);
-                    }
+                        const userId = userDropdown ? parseInt(userDropdown.value) : null;
+                        const selectedCaseId = caseDropdown ? parseInt(caseDropdown.getAttribute("data-current-case-id")) : null;
+
+                        if (userId) {
+                            fetchAssociatedCases(recordId, userId, selectedCaseId);
+                        }
+                    }, { once: true }); // Prevent duplicate event handlers
                 });
             });
-        });
-    </script>
+        </script>
+
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>

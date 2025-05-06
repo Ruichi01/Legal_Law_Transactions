@@ -4,6 +4,7 @@ using Legal_Law_Transactions.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 
 namespace Legal_Law_Transactions.Controllers
 {
@@ -12,11 +13,14 @@ namespace Legal_Law_Transactions.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IPasswordHasher<User> _passwordHasher;
 
-        public CitizenController(ApplicationDbContext context, IWebHostEnvironment webHostEnvironment)
+
+        public CitizenController(ApplicationDbContext context, IWebHostEnvironment webHostEnvironment, IPasswordHasher<User> passwordHasher)
         {
             _context = context;
             _webHostEnvironment = webHostEnvironment;
+            _passwordHasher = passwordHasher;
         }
 
         public IActionResult Dashboard()
@@ -104,7 +108,8 @@ namespace Legal_Law_Transactions.Controllers
             if (existing != null)
             {
                 existing.type = type;
-                existing.status = status;
+                existing.status = expiry_date < DateTime.Today ? "Inactive" : "Pending";
+
                 existing.issue_date = issue_date;
                 existing.expiry_date = expiry_date;
 
@@ -127,26 +132,40 @@ namespace Legal_Law_Transactions.Controllers
                 {
                     user_id = currentUser.user_id,
                     type = type,
-                    status = status,
+                    status = expiry_date < DateTime.Today ? "Inactive" : "Pending",
                     issue_date = issue_date,
                     expiry_date = expiry_date
                 };
-
                 if (licenseImage != null)
                 {
-                    var fileName = Guid.NewGuid() + Path.GetExtension(licenseImage.FileName);
+                    var allowedExtensions = new[] { ".jpg", ".jpeg", ".png" };
+                    var allowedContentTypes = new[] { "image/jpeg", "image/png" };
+                    var extension = Path.GetExtension(licenseImage.FileName).ToLowerInvariant();
+                    var contentType = licenseImage.ContentType;
+
+                    if (!allowedExtensions.Contains(extension) || !allowedContentTypes.Contains(contentType))
+                    {
+                        TempData["ErrorMessage"] = "Only JPG and PNG images are allowed.";
+                        return RedirectToAction("MyLicense");
+                    }
+
+
+                    var fileName = Guid.NewGuid() + extension;
                     var path = Path.Combine("wwwroot/images", fileName);
                     using (var stream = new FileStream(path, FileMode.Create))
                     {
                         await licenseImage.CopyToAsync(stream);
                     }
+
                     license.license_image = "/images/" + fileName;
                 }
+
 
                 _context.Licenses.Add(license);
             }
 
             await _context.SaveChangesAsync();
+            TempData["SuccessMessage"] = existing != null ? "License updated successfully." : "License added successfully.";
             return RedirectToAction("MyLicense");
         }
 
@@ -157,24 +176,37 @@ namespace Legal_Law_Transactions.Controllers
             if (license == null) return NotFound();
 
             license.type = type;
-            license.status = status;
+            license.status = expiry_date < DateTime.Today ? "Inactive" : "Pending";
             license.issue_date = issue_date;
             license.expiry_date = expiry_date;
 
+
             if (licenseImage != null)
             {
-                var fileName = Guid.NewGuid() + Path.GetExtension(licenseImage.FileName);
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png" };
+                var allowedContentTypes = new[] { "image/jpeg", "image/png" };
+                var extension = Path.GetExtension(licenseImage.FileName).ToLowerInvariant();
+                var contentType = licenseImage.ContentType;
+
+                if (!allowedExtensions.Contains(extension) || !allowedContentTypes.Contains(contentType))
+                {
+                    TempData["ErrorMessage"] = "Only JPG and PNG images are allowed.";
+                    return RedirectToAction("MyLicense");
+                }
+
+                var fileName = Guid.NewGuid() + extension;
                 var path = Path.Combine("wwwroot/images", fileName);
                 using (var stream = new FileStream(path, FileMode.Create))
                 {
                     await licenseImage.CopyToAsync(stream);
                 }
+
                 license.license_image = "/images/" + fileName;
             }
 
             _context.Licenses.Update(license);
             await _context.SaveChangesAsync();
-
+            TempData["SuccessMessage"] = "License updated successfully.";
             return RedirectToAction("MyLicense");
         }
 
@@ -248,9 +280,20 @@ namespace Legal_Law_Transactions.Controllers
             var currentUser = _context.Users.FirstOrDefault(u => u.email == email);
             if (currentUser == null) return RedirectToAction("Login", "Account");
 
+            int pageSize = 10;
+            int currentPage = string.IsNullOrEmpty(Request.Query["page"]) ? 1 : int.Parse(Request.Query["page"]);
+
+            var totalCount = _context.Evidences.Count(e => e.user_id == currentUser.user_id);
+            int totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+            ViewData["CurrentPage"] = currentPage;
+            ViewData["TotalPages"] = totalPages;
+
             var myCases = _context.Cases.Where(c => c.user_id == currentUser.user_id).ToList();
+
             return View(myCases);
         }
+
 
         public IActionResult RequestNotarization(int page = 1)
         {
@@ -273,6 +316,7 @@ namespace Legal_Law_Transactions.Controllers
             ViewData["CurrentPage"] = page;
 
             return View(documents);
+
         }
 
         [HttpPost]
@@ -346,5 +390,45 @@ namespace Legal_Law_Transactions.Controllers
 
             return View(schedules);
         }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ChangePassword(string CurrentPassword, string NewPassword, string ConfirmPassword)
+        {
+            if (NewPassword != ConfirmPassword)
+            {
+                TempData["Error"] = "New password and confirmation do not match.";
+                return RedirectToAction("Profile", "Citizen");
+            }
+
+            var userIdString = HttpContext.Session.GetString("UserId"); 
+            if (!int.TryParse(userIdString, out int userId))
+            {
+                TempData["Error"] = "User session not found.";
+                return RedirectToAction("Login", "Citizen");
+            }
+
+            var user = await _context.Users.FindAsync(userId); 
+            if (user == null)
+            {
+                TempData["Error"] = "User not found.";
+                return RedirectToAction("Login", "Account");
+            }
+
+            var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.password, CurrentPassword);  
+            if (verificationResult == PasswordVerificationResult.Failed)
+            {
+                TempData["Error"] = "Current password is incorrect.";
+                return RedirectToAction("Profile", "Citizen"); 
+            }
+
+            user.password = _passwordHasher.HashPassword(user, NewPassword);
+            _context.Users.Update(user);  
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Password changed successfully.";
+            return RedirectToAction("Profile", "Citizen");  
+        }
+
+
     }
 }

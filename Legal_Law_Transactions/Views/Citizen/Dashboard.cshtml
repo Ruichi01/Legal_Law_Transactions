@@ -8,7 +8,7 @@
     var recordCount = _context.Records.Count(r => r.user_id == currentUser.user_id);
     var caseCount = _context.Cases.Count(c => c.user_id == currentUser.user_id);
     var license = _context.Licenses.FirstOrDefault(l => l.user_id == currentUser.user_id);
-    var notarizationCount = _context.Documents.Count(d => d.user_id == currentUser.user_id && d.notarized == "Notarization");
+    var notarizationCount = _context.Documents.Count(d => d.user_id == currentUser.user_id);
 
     string licenseStatus = license?.status ?? "N/A";
 }
@@ -48,7 +48,7 @@
                     <span class="fw-medium">@email</span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow-sm p-2">
-                    <li><a class="dropdown-item d-flex align-items-center gap-2" href="/Enforcer/Profile"><i class="bi bi-person-lines-fill"></i> Profile</a></li>
+                    <li><a class="dropdown-item d-flex align-items-center gap-2" href="/Citizen/Profile"><i class="bi bi-person-lines-fill"></i> Profile</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li>
                         <form method="post" asp-controller="Account" asp-action="Logout" class="mb-0">
@@ -69,7 +69,7 @@
                 <li><a href="/Citizen/Dashboard" class="nav-link active"><i class="bi bi-house-fill"></i> Home</a></li>
                 <li><a href="/Citizen/MyRecords" class="nav-link"><i class="bi bi-clipboard-data"></i> Records</a></li>
                 <li><a href="/Citizen/MyCases" class="nav-link"><i class="bi bi-briefcase-fill"></i> Cases</a></li>
-                <li><a href="/Citizen/MyDocuments" class="nav-link "><i class="bi bi-file-earmark-text-fill"></i> Documents</a></li>
+                <li><a href="/Citizen/MyDocuments" class="nav-link "><i class="bi bi-file-earmark-text-fill"></i> Evidences</a></li>
                 <li><a href="/Citizen/MyLicense" class="nav-link "><i class="bi bi-award-fill"></i> License</a></li>
                 <li><a href="/Citizen/MySchedule" class="nav-link"><i class="bi bi-calendar-event-fill"></i> Schedule</a></li>
                 <li><a href="/Citizen/RequestNotarization" class="nav-link "><i class="bi bi-shield-check"></i> Request Validation</a></li>
@@ -77,7 +77,7 @@
         </div>
     </div>
 
-    <div class="dashboard-content p-4" style="margin-left: 130px; margin-top: -5px;">
+    <div class="dashboard-content p-4" style="margin-left: 130px; margin-top: 90px;">
         <h3 class="mb-4 fw-semibold">Welcome, <span class="text-primary">@currentUser?.firstname</span>!</h3>
 
         <div class="mb-4">
@@ -137,7 +137,7 @@
                     <div class="card-body d-flex flex-column align-items-start">
                         <div class="d-flex justify-content-between w-100 align-items-center mb-3">
                             <i class="bi bi-shield-check fs-2 text-warning"></i>
-                            <span class="badge bg-warning text-dark">Notarizations</span>
+                            <span class="badge bg-warning text-dark">Documents</span>
                         </div>
                         <h2 class="fw-bold">@notarizationCount</h2>
                         <p class="text-muted mb-2">Requests submitted</p>

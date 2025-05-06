@@ -26,5 +26,7 @@ namespace Legal_Law_Transactions.Services
             _context.AdminLogs.Add(log);
             _context.SaveChanges();
         }
+
+
     }
 }

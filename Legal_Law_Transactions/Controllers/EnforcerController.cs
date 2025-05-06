@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.Identity;
 
 namespace Legal_Law_Transactions.Controllers
 {
@@ -16,11 +17,14 @@ namespace Legal_Law_Transactions.Controllers
     {
         private readonly IWebHostEnvironment _environment;
         private readonly ApplicationDbContext _context;
+        private readonly IPasswordHasher<User> _passwordHasher;
 
-        public EnforcerController(ApplicationDbContext context, IWebHostEnvironment environment)
+        public EnforcerController(ApplicationDbContext context, IWebHostEnvironment environment, IPasswordHasher<User> passwordHasher)
         {
             _context = context;
             _environment = environment;
+            _passwordHasher = passwordHasher;
+
         }
 
         public IActionResult Dashboard()
@@ -56,6 +60,7 @@ namespace Legal_Law_Transactions.Controllers
             _context.Records.Add(record);
             _context.SaveChanges();
 
+            TempData["SuccessMessage"] = "Record uploaded successfully.";
             return RedirectToAction("Records");
         }
 
@@ -75,6 +80,7 @@ namespace Legal_Law_Transactions.Controllers
                 _context.SaveChanges();
             }
 
+            TempData["SuccessMessage"] = "Record updated successfully.";
             return RedirectToAction("Records");
         }
 
@@ -114,7 +120,6 @@ namespace Legal_Law_Transactions.Controllers
         }
 
         [HttpPost]
-        [HttpPost]
         public IActionResult UpdateLicense(int license_id, string type, DateTime issue_date, DateTime expiry_date, string status)
         {
             var license = _context.Licenses.FirstOrDefault(l => l.license_id == license_id);
@@ -127,7 +132,7 @@ namespace Legal_Law_Transactions.Controllers
 
                 _context.SaveChanges();
             }
-
+            TempData["SuccessMessage"] = "License updated successfully.";
             return RedirectToAction("LicenseVerification");
         }
 
@@ -333,10 +338,8 @@ namespace Legal_Law_Transactions.Controllers
             return RedirectToAction("EvidenceUpload");
         }
 
-[HttpGet]
         public JsonResult GetCasesForUser(int userId)
         {
-
             var cases = _context.Cases
                                 .Where(c => c.user_id == userId)
                                 .Select(c => new {
@@ -347,6 +350,7 @@ namespace Legal_Law_Transactions.Controllers
                                 .ToList();
             return Json(cases);
         }
+
         public IActionResult ViewEvidence(string fileName)
         {
             if (string.IsNullOrEmpty(fileName))
@@ -364,7 +368,44 @@ namespace Legal_Law_Transactions.Controllers
 
             return NotFound();
         }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ChangePassword(string CurrentPassword, string NewPassword, string ConfirmPassword)
+        {
+            if (NewPassword != ConfirmPassword)
+            {
+                TempData["Error"] = "New password and confirmation do not match.";
+                return RedirectToAction("Profile", "Enforcer");
+            }
 
+            var userIdString = HttpContext.Session.GetString("UserId");
+            if (!int.TryParse(userIdString, out int userId))
+            {
+                TempData["Error"] = "User session not found.";
+                return RedirectToAction("Login", "Enforcer");
+            }
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                TempData["Error"] = "User not found.";
+                return RedirectToAction("Login", "Account");
+            }
+
+            var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.password, CurrentPassword);
+            if (verificationResult == PasswordVerificationResult.Failed)
+            {
+                TempData["Error"] = "Current password is incorrect.";
+                return RedirectToAction("Profile", "Enforcer");
+            }
+
+            user.password = _passwordHasher.HashPassword(user, NewPassword);
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Password changed successfully.";
+            return RedirectToAction("Profile", "Enforcer");
+        }
 
     }
 }

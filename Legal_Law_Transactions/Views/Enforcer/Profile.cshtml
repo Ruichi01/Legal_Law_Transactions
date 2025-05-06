@@ -1,50 +1,173 @@
-﻿@{
+﻿@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+@inject Legal_Law_Transactions.Models.ApplicationDbContext _context
+
+@{
+    var email = HttpContextAccessor.HttpContext.Session.GetString("UserEmail");
+    var firstname = HttpContextAccessor.HttpContext.Session.GetString("FirstName");
+    var lastname = HttpContextAccessor.HttpContext.Session.GetString("LastName");
+    var role = HttpContextAccessor.HttpContext.Session.GetString("UserRole");
+
     ViewData["Title"] = "Profile";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="container mt-4">
-    <h2 class="mb-4">My Profile</h2>
-    <ul class="nav nav-tabs" id="profileTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab">Personal Info</button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="password-tab" data-bs-toggle="tab" data-bs-target="#password" type="button" role="tab">Change Password</button>
-        </li>
-    </ul>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>@ViewData["Title"]</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <div class="tab-content mt-3" id="profileTabsContent">
-        <!-- Personal Info Tab -->
-        <div class="tab-pane fade show active" id="info" role="tabpanel">
-            <div class="card p-4 shadow-sm">
-                <h5>Name:</h5>
-                <p>@ViewBag.FullName</p>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
 
-                <h5>Email:</h5>
-                <p>@ViewBag.Email</p>
+        .navbar-custom {
+            background-color: #f8f9fa;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .profile-header i {
+            font-size: 3rem;
+            color: #0d6efd;
+        }
+    </style>
+
+    <!-- Navbar -->
+    <nav class="navbar-custom">
+        <div class="fw-semibold">Law Enforcement</div>
+        <div class="d-flex align-items-center gap-3">
+            <div class="dropdown">
+                <button class="btn btn-light position-relative border-0" data-bs-toggle="dropdown">
+                    <i class="bi bi-bell-fill fs-4 text-primary"></i>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">3</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#"><i class="bi bi-exclamation-circle me-2 text-warning"></i> New case added</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="bi bi-person-plus me-2 text-info"></i> User requested approval</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="bi bi-file-earmark-check me-2 text-success"></i> Document updated</a></li>
+                </ul>
+            </div>
+
+            <div class="dropdown">
+                <button class="btn btn-light d-flex align-items-center gap-2 rounded-pill px-3 py-2 dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="bi bi-gear-fill fs-4 text-secondary"></i>
+                    <span class="fw-medium">@email</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm p-2">
+                    <li><a class="dropdown-item d-flex align-items-center gap-2" href="/Enforcer/Profile"><i class="bi bi-person-lines-fill"></i> Profile</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <form method="post" asp-controller="Account" asp-action="Logout" class="mb-0">
+                            <button type="submit" class="dropdown-item d-flex align-items-center gap-2 text-danger">
+                                <i class="bi bi-box-arrow-right"></i> Logout
+                            </button>
+                        </form>
+                    </li>
+                </ul>
             </div>
         </div>
+    </nav>
 
-        <!-- Change Password Tab -->
-        <div class="tab-pane fade" id="password" role="tabpanel">
-            <div class="card p-4 shadow-sm">
-                <form method="post" asp-action="ChangePassword" asp-controller="Account">
-                    <div class="mb-3">
-                        <label for="currentPassword" class="form-label">Current Password</label>
-                        <input type="password" class="form-control" id="currentPassword" name="CurrentPassword" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="newPassword" class="form-label">New Password</label>
-                        <input type="password" class="form-control" id="newPassword" name="NewPassword" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="confirmPassword" class="form-label">Confirm New Password</label>
-                        <input type="password" class="form-control" id="confirmPassword" name="ConfirmPassword" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Update Password</button>
-                </form>
-            </div>
+    <!-- Main Content -->
+    <div class="container" style="padding-top: 80px; ">
+        <div class="d-flex justify-content-start mb-4" style="padding-left: 200px; padding-top: 20px;">
+            <a href="/Enforcer/Dashboard" class="btn btn-outline-secondary rounded-pill px-4 shadow-sm">
+                <i class="bi bi-house-door-fill me-2"></i>Back to Dashboard
+            </a>
         </div>
-    </div>
-</div>
+
+
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <!-- Profile Card -->
+                <div class="card shadow-sm border-0 text-center">
+                    <div class="card-body profile-header">
+                        <i class="bi bi-person-circle"></i>
+                        <h3 class="mt-3 mb-1">@firstname @lastname</h3>
+                        <p class="text-muted mb-1">@role</p>
+                        <p class="text-secondary">@email</p>
+                    </div>
+                </div>
+
+                <!-- Profile Details -->
+                <hr class="my-4" />
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <h5 class="mb-4"><i class="bi bi-person-lines-fill me-2"></i>Personal Information</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">First Name</label>
+                                <p class="text-muted">@firstname</p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Last Name</label>
+                                <p class="text-muted">@lastname</p>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email Address</label>
+                            <p class="text-muted">@email</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Role</label>
+                            <p class="text-muted">@role</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Change Password -->
+                <hr class="my-4" />
+                <div class="card shadow-sm border-0 mb-5">
+                    @if (TempData["SuccessMessage"] != null)
+                    {
+                        <div class="alert alert-success rounded-pill px-4 py-2 small text-center mx-auto mb-4" style="max-width: 800px;">
+                            @TempData["SuccessMessage"]
+                        </div>
+                    }
+                    @if (TempData["Error"] != null)
+                    {
+                        <div class="alert alert-danger rounded-pill px-4 py-2 small text-center mx-auto mb-4" style="max-width: 800px;">
+                            @TempData["Error"]
+                        </div>
+                    }
+                    <div class="card-body">
+                        <h5 class="mb-4"><i class="bi bi-lock-fill me-2"></i>Change Password</h5>
+                        <form method="post" asp-action="ChangePassword" asp-controller="Enforcer">
+                            @Html.AntiForgeryToken()
+                            <div class="mb-3">
+                                <label for="currentPassword" class="form-label">Current Password</label>
+                                <input type="password" class="form-control" id="currentPassword" name="CurrentPassword" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="newPassword" class="form-label">New Password</label>
+                                <input type="password" class="form-control" id="newPassword" name="NewPassword" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                                <input type="password" class="form-control" id="confirmPassword" name="ConfirmPassword" required>
+                            </div>
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-primary rounded-pill px-4">Update Password</button>
+                            </div>
+                        </form>
+
+                    </div>
+                </div>
+
+
+                <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+
+

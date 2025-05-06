@@ -1,26 +1,29 @@
 ﻿using Microsoft.EntityFrameworkCore.Migrations;
 
+#nullable disable
+
 namespace Legal_Law_Transactions.Migrations
 {
-    public partial class AddFilePathToDocument : Migration
+    /// <inheritdoc />
+    public partial class feedbackapplication : Migration
     {
+        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // Adding the file_path column to the Documents table
             migrationBuilder.AddColumn<string>(
-                name: "file_path",
-                table: "Documents",
+                name: "feedback",
+                table: "Applications",
                 type: "nvarchar(max)",
                 nullable: false,
                 defaultValue: "");
         }
 
+        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            // Removing the file_path column from the Documents table
             migrationBuilder.DropColumn(
-                name: "file_path",
-                table: "Documents");
+                name: "feedback",
+                table: "Applications");
         }
     }
 }

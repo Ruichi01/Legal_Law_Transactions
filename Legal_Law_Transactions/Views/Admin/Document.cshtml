@@ -98,16 +98,27 @@
                 <li><a href="/Admin/Cases" class="nav-link"><i class="bi bi-briefcase-fill"></i> Cases</a></li>
                 <li><a href="/Admin/Schedules" class="nav-link"><i class="bi bi-calendar-week"></i> Schedules</a></li>
                 <li><a href="/Admin/Logs" class="nav-link"><i class="bi bi-list-ul"></i> Logs</a></li>
+                <li><a href="/Admin/Application" class="nav-link"><i class="bi bi-file-earmark-text"></i> Application</a></li>
+                <li><a href="/Admin/Evidence" class="nav-link"><i class="bi bi-folder2-open"></i> Evidence</a></li>
             </ul>
         </div>
 
         <!-- Main Content -->
-        <div class="dashboard-content">
+        <div class="dashboard-content" style="margin-left: 80px; margin-top: 60px;">
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="alert alert-danger" style="margin-left: 30px; margin-top: 40px;">@TempData["ErrorMessage"]</div>
+            }
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success" style="margin-left: 30px; margin-top: 40px;">@TempData["SuccessMessage"]</div>
+            }
+
             <div class="table-container">
                 <table class="table table-custom">
                     <thead>
                         <tr>
-                            <th>Document ID</th>
+                            <th>Document File</th>
                             <th>Content</th>
                             <th>Full Name</th>
                             <th>Status</th>
@@ -118,7 +129,21 @@
                         @foreach (var item in paginatedDocuments)
                         {
                             <tr>
-                                <td>@item.document_id</td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.file_path))
+                                    {
+                                        <a href="@Url.Action("ViewDocument", "Admin", new { fileName = System.IO.Path.GetFileName(item.file_path) })" target="_blank" class="btn btn-outline-primary btn-sm">
+                                            View Document
+                                        </a>
+
+                                    }
+                                    else
+                                    {
+                                        <span>No File</span>
+                                    }
+
+                                </td>
+
                                 <td>@item.content</td>
                                 <td>@item.User?.firstname @item.User?.lastname</td>
                                 <td>

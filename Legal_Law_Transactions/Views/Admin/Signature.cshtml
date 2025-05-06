@@ -83,11 +83,22 @@
                 <li><a href="/Admin/Cases" class="nav-link"><i class="bi bi-briefcase-fill"></i> Cases</a></li>
                 <li><a href="/Admin/Schedules" class="nav-link"><i class="bi bi-calendar-week"></i> Schedules</a></li>
                 <li><a href="/Admin/Logs" class="nav-link"><i class="bi bi-list-ul"></i> Logs</a></li>
+                <li><a href="/Admin/Application" class="nav-link"><i class="bi bi-file-earmark-text"></i> Application</a></li>
+                <li><a href="/Admin/Evidence" class="nav-link"><i class="bi bi-folder2-open"></i> Evidence</a></li>
             </ul>
         </div>
 
         <!-- Main Content -->
-        <div class="dashboard-content">
+        <div class="dashboard-content" style="margin-left: 80px; margin-top: 60px;">
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="alert alert-danger" style="margin-left: 30px; margin-top: 40px;">@TempData["ErrorMessage"]</div>
+            }
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success" style="margin-left: 30px; margin-top: 40px;">@TempData["SuccessMessage"]</div>
+            }
+
             <div class="table-container">
                 <table class="table table-custom">
                     <thead>

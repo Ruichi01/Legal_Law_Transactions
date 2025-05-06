@@ -15,6 +15,8 @@ namespace Legal_Law_Transactions.Models
         public string password { get; set; }
         public string role { get; set; }
 
+        public string status { get; set; } = "Pending";
+
         // Navigation properties
         public ICollection<Record> Records { get; set; } = new List<Record>();
         public ICollection<Document> Documents { get; set; } = new List<Document>();
@@ -22,5 +24,7 @@ namespace Legal_Law_Transactions.Models
         public ICollection<Case> Cases { get; set; } = new List<Case>();
         public ICollection<License> Licenses { get; set; } = new List<License>();
         public ICollection<Evidence> Evidences { get; set; } = new List<Evidence>();
+        public ICollection<Application> Applications { get; set; } = new List<Application>();
+
     }
 }

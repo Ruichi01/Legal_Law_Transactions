@@ -17,6 +17,13 @@
 						.Skip((page - 1) * pageSize)
 						.Take(pageSize)
 						.ToList();
+	string GetStatusBadgeClass(string status) => status switch
+	{
+		"Active" => "text-bg-success",
+		"Inactive" => "text-bg-danger",
+		"Pending" => "text-bg-warning",
+		_ => "text-bg-secondary"
+	};
 }
 
 <!DOCTYPE html>
@@ -70,20 +77,31 @@
 	<div class="main-wrapper">
 		<div class="sidebar-container">
 		<ul class="nav flex-column">
-			<li><a href="/Admin/Dashboard" class="nav-link"><i class="bi bi-house-fill"></i> Home</a></li>
-			<li><a href="/Admin/Users" class="nav-link active"><i class="bi bi-people-fill"></i> Users</a></li>
-			<li><a href="/Admin/Records" class="nav-link"><i class="bi bi-journal-text"></i> Criminal Records</a></li>
-			<li><a href="/Admin/License" class="nav-link"><i class="bi bi-card-checklist"></i> Licenses</a></li>
-			<li><a href="/Admin/Signature" class="nav-link"><i class="bi bi-pencil-square"></i> Signatures</a></li>
-			<li><a href="/Admin/Document" class="nav-link"><i class="bi bi-folder2-open"></i> Documents</a></li>
-			<li><a href="/Admin/Cases" class="nav-link"><i class="bi bi-briefcase-fill"></i> Cases</a></li>
-			<li><a href="/Admin/Schedules" class="nav-link"><i class="bi bi-calendar-week"></i> Schedules</a></li>
-			<li><a href="/Admin/Logs" class="nav-link"><i class="bi bi-list-ul"></i> Logs</a></li>
+				<li><a href="/Admin/Dashboard" class="nav-link"><i class="bi bi-house-fill"></i> Home</a></li>
+				<li><a href="/Admin/Users" class="nav-link active"><i class="bi bi-people-fill"></i> Users</a></li>
+				<li><a href="/Admin/Records" class="nav-link"><i class="bi bi-journal-text"></i> Criminal Records</a></li>
+				<li><a href="/Admin/License" class="nav-link"><i class="bi bi-card-checklist"></i> Licenses</a></li>
+				<li><a href="/Admin/Signature" class="nav-link"><i class="bi bi-pencil-square"></i> Signatures</a></li>
+				<li><a href="/Admin/Document" class="nav-link"><i class="bi bi-folder2-open"></i> Documents</a></li>
+				<li><a href="/Admin/Cases" class="nav-link"><i class="bi bi-briefcase-fill"></i> Cases</a></li>
+				<li><a href="/Admin/Schedules" class="nav-link"><i class="bi bi-calendar-week"></i> Schedules</a></li>
+				<li><a href="/Admin/Logs" class="nav-link"><i class="bi bi-list-ul"></i> Logs</a></li>
+				<li><a href="/Admin/Application" class="nav-link"><i class="bi bi-file-earmark-text"></i> Application</a></li>
+				<li><a href="/Admin/Evidence" class="nav-link"><i class="bi bi-folder2-open"></i> Evidence</a></li>
 		</ul>
 		</div>
 	</div>
 
-	<div class="dashboard-content">
+	<div class="dashboard-content" style="margin-left: 80px; margin-top: 60px;">
+		@if (TempData["ErrorMessage"] != null)
+		{
+			<div class="alert alert-danger" style="margin-left: 30px; margin-top: 40px;">@TempData["ErrorMessage"]</div>
+		}
+		@if (TempData["SuccessMessage"] != null)
+		{
+			<div class="alert alert-success" style="margin-left: 30px; margin-top: 40px;">@TempData["SuccessMessage"]</div>
+		}
+
 		<div class="table-container">
 			<table class="table table-custom">
 
@@ -93,6 +111,7 @@
 					<th>First Name</th>
 					<th>Last Name</th>
 					<th>Email</th>
+					<th>Status</th>
 					<th>Role</th>
 					<th>Actions</th>
 				</tr>
@@ -105,6 +124,8 @@
 						<td>@user.firstname</td>
 						<td>@user.lastname</td>
 						<td>@user.email</td>
+						<td><span class="badge @GetStatusBadgeClass(user.status)">@user.status</span></td>
+
 							<td>
 								<span class="badge @(user.role == "Lawyer" ? "bg-info" : user.role == "Enforcer" ? "bg-warning text-dark" : "bg-success")">
 									@user.role
@@ -151,20 +172,50 @@
 													<option value="Lawyer" selected>Lawyer</option>
 													<option value="Enforcer">Law Enforcer</option>
 													<option value="Prosecutor">Prosecutor</option>
+													<option value="Citizen">Citizen</option>
+
 												}
 												else if (user.role == "Enforcer")
 												{
 													<option value="Lawyer">Lawyer</option>
 													<option value="Enforcer" selected>Law Enforcer</option>
 													<option value="Prosecutor">Prosecutor</option>
+													<option value="Citizen">Citizen</option>
+
 												}
+													else if (user.role == "Prosecutor")
+													{
+														<option value="Lawyer">Lawyer</option>
+														<option value="Enforcer" >Law Enforcer</option>
+														<option value="Prosecutor " selected >Prosecutor</option>
+														<option value="Citizen">Citizen</option>
+
+													}
 												else
 												{
 													<option value="Lawyer">Lawyer</option>
 													<option value="Enforcer">Law Enforcer</option>
-													<option value="Prosecutor" selected>Prosecutor</option>
+													<option value="Prosecutor" >Prosecutor</option>
+														<option value="Citizen" selected>Citizen</option>
+
 												}
 											</select>
+										</div>
+										<div class="mb-3">
+											<label for="status-@user.user_id" class="form-label">Account Status</label>
+												<select class="form-select" id="status-@user.user_id" name="status" required>
+													@if (user.status == "Active")
+													{
+														<option value="Active" selected>Active</option>
+														<option value="Inactive">Inactive</option>
+													}
+													else 
+													{
+														<option value="Active" >Active</option>
+														<option value="Inactive" selected>Inactive</option>
+
+													}
+												</select>
 										</div>
 										<div class="mb-3">
 											<label for="password-@user.user_id" class="form-label">Password</label>
@@ -234,6 +285,14 @@
 									<option value="Prosecutor">Prosecutor</option>
 								</select>
 							</div>
+						<div class="mb-3">
+							<label for="status" class="form-label">Account Status</label>
+							<select class="form-select" id="status" name="Status" required>
+								<option value="Active">Active</option>
+								<option value="Inactive">Inactive</option>
+								<option value="Pending" selected>Pending</option>
+							</select>
+						</div>
 							<div class="mb-3">
 								<label for="password" class="form-label">Password</label>
 								<input type="password" class="form-control" id="password" name="Password" required />

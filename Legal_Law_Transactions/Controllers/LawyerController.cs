@@ -8,6 +8,7 @@ using Dropbox.Sign.Model;
 using Dropbox.Sign.Client;
 using Dropbox.Sign.Api;
 using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Identity;
 
 namespace Legal_Law_Transactions.Controllers
 {
@@ -16,12 +17,15 @@ namespace Legal_Law_Transactions.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IConfiguration _configuration;
+        private readonly IPasswordHasher<User> _passwordHasher;
 
 
-        public LawyerController(ApplicationDbContext context, IConfiguration configuration)
+        public LawyerController(ApplicationDbContext context, IConfiguration configuration, IPasswordHasher<User> passwordHasher)
         {
             _context = context;
             _configuration = configuration;
+            _passwordHasher = passwordHasher;
+
 
         }
 
@@ -144,17 +148,15 @@ namespace Legal_Law_Transactions.Controllers
 
             if (evidence != null)
             {
-                // Only allow these specific statuses
-                if (new[] { "Pending", "Analyzing", "Validated" }.Contains(status))
+                if (new[] { "Pending", "Analyzing", "Validated","Rejected" }.Contains(status))
                 {
                     evidence.status = status;
                     _context.SaveChanges();
                 }
             }
-
+            TempData["SuccessMessage"] = "Evidence status updated successfully.";
             return RedirectToAction("Evidences");
         }
-
 
         public IActionResult Documents(int page = 1)
         {
@@ -192,5 +194,44 @@ namespace Legal_Law_Transactions.Controllers
             var fileBytes = System.IO.File.ReadAllBytes(filePath);
             return File(fileBytes, "application/octet-stream", fileName);
         }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ChangePassword(string CurrentPassword, string NewPassword, string ConfirmPassword)
+        {
+            if (NewPassword != ConfirmPassword)
+            {
+                TempData["Error"] = "New password and confirmation do not match.";
+                return RedirectToAction("Profile", "Lawyer");
+            }
+
+            var userIdString = HttpContext.Session.GetString("UserId");
+            if (!int.TryParse(userIdString, out int userId))
+            {
+                TempData["Error"] = "User session not found.";
+                return RedirectToAction("Login", "Lawyer");
+            }
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                TempData["Error"] = "User not found.";
+                return RedirectToAction("Login", "Account");
+            }
+
+            var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.password, CurrentPassword);
+            if (verificationResult == PasswordVerificationResult.Failed)
+            {
+                TempData["Error"] = "Current password is incorrect.";
+                return RedirectToAction("Profile", "Lawyer");
+            }
+
+            user.password = _passwordHasher.HashPassword(user, NewPassword);
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Password changed successfully.";
+            return RedirectToAction("Profile", "Lawyer");
+        }
+
     }
 }
