@@ -305,9 +305,6 @@ namespace Legal_Law_Transactions.Controllers
             return RedirectToAction("Application");
         }
 
-
-
-
         public IActionResult ViewApplication(string fileName)
         {
             if (string.IsNullOrEmpty(fileName))

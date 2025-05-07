@@ -8,7 +8,7 @@
 
     string GetStatusBadgeClass(string status) => status switch
     {
-        "Pending" => "text-bg-primary",
+        "Pending" => "text-bg-warning",
         "In Progress" => "text-bg-warning",
         "Approved" => "text-bg-success",
         "Rejected" => "text-bg-danger",
@@ -20,10 +20,8 @@
         if (string.IsNullOrWhiteSpace(feedback))
             return "";
 
-        // Clean and line-break after periods
-        feedback = Regex.Replace(feedback, @"\s*\.\s*", ".\n"); // new line after each sentence
+        feedback = Regex.Replace(feedback, @"\s*\.\s*", ".\n");
 
-        // Remove any unwanted or broken phrases
         feedback = feedback.Replace("To way one way", "")
                            .Replace("..", ".")
                            .Trim();
@@ -77,7 +75,11 @@
     </nav>
 
     <!-- Pending Page Content -->
-    <div class="container mt-5" style="padding-top: 300px;">
+    <div class="container mt-5" style="padding-top: 200px;">
+        <div class="text-center my-5">
+            <div class="loader mx-auto"></div>
+        </div>
+
         <h2 class="text-center mb-4">Pending Application</h2>
 
         @if (application != null)
@@ -101,10 +103,18 @@
                         </div>
                     }
 
-
-
                     <div class="mt-4">
                         Please upload a new file again.
+                    </div>
+                </div>
+            }
+            else if (application.status == "Approved")
+            {
+                <div class="alert alert-success text-center mx-auto" style="max-width: 600px; font-size: 1rem; word-wrap: break-word; overflow-wrap: break-word;">
+                    <strong>Your application has been approved!</strong><br />
+                    <div class="mt-3">
+                        Please sign in again to complete the activation and access your account.
+
                     </div>
                 </div>
             }

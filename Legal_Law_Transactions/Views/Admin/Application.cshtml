@@ -136,15 +136,28 @@
                             <td>@application.submitted_at</td>
                             <td><span class="badge @GetStatusBadgeClass(application.status)">@application.status</span></td>
                             <td class="action-buttons">
-                                <!-- Approve Button -->
-                                <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#approveApplicationModal-@application.application_id">
-                                    <i class="bi bi-check-circle"></i> Approve
-                                </button>
-                                <!-- Reject Button -->
-                                <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#rejectApplicationModal-@application.application_id">
-                                    <i class="bi bi-x-circle"></i> Reject
-                                </button>
+                                @if (application.status == "Approved")
+                                {
+                                    <button class="btn btn-sm btn-outline-success" disabled>
+                                        <i class="bi bi-check-circle"></i> Approved
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" disabled>
+                                        <i class="bi bi-x-circle"></i> Reject
+                                    </button>
+                                }
+                                else
+                                {
+                                    <!-- Approve Button -->
+                                    <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#approveApplicationModal-@application.application_id">
+                                        <i class="bi bi-check-circle"></i> Approve
+                                    </button>
+                                    <!-- Reject Button -->
+                                    <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#rejectApplicationModal-@application.application_id">
+                                        <i class="bi bi-x-circle"></i> Reject
+                                    </button>
+                                }
                             </td>
+
                         </tr>
 
                         <!-- Approve Application Modal -->
@@ -242,7 +255,7 @@
                         </div> 
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-action" data-bs-dismiss="modal">Close</button>
                         <button type="submit" class="btn btn-success">Save</button>
                     </div>
                 </form>

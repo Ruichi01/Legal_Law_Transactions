@@ -8,7 +8,9 @@
     using System.Net.Http;
     using System.Text.Json;
     using Microsoft.Extensions.Configuration;
-using Dropbox.Sign.Client;
+    using Dropbox.Sign.Client;
+    using Microsoft.Data.SqlClient;
+    using Dapper;
 
 namespace Legal_Law_Transactions.Controllers
     {
@@ -17,11 +19,13 @@ namespace Legal_Law_Transactions.Controllers
             private readonly ApplicationDbContext _context;
             private readonly PasswordHasher<User> _passwordHasher = new PasswordHasher<User>();
             private readonly IConfiguration _configuration;
+            private readonly ILogger<AccountController> _logger;
 
-            public AccountController(ApplicationDbContext context, IConfiguration configuration)
+            public AccountController(ApplicationDbContext context, IConfiguration configuration, ILogger<AccountController> logger)
             {
             _context = context;
             _configuration = configuration;
+            _logger = logger;
         }
 
           
@@ -152,16 +156,20 @@ namespace Legal_Law_Transactions.Controllers
             var user = _context.Users.FirstOrDefault(u => u.email == email);
             if (user == null || _passwordHasher.VerifyHashedPassword(user, user.password, password) != PasswordVerificationResult.Success)
             {
+                _logger.LogWarning($"Failed login attempt for email: {email}");
+
+                LogFailedLoginAttempt(email, Request.HttpContext.Connection.RemoteIpAddress.ToString(), "Invalid login credentials.");
+
                 ViewBag.Error = "Invalid login credentials.";
                 return View();
             }
 
             var claims = new List<Claim>
-    {
-        new Claim(ClaimTypes.Name, user.email),
-        new Claim(ClaimTypes.Role, user.role),
-        new Claim("FullName", $"{user.firstname} {user.lastname}")
-    };
+            {
+                new Claim(ClaimTypes.Name, user.email),
+                new Claim(ClaimTypes.Role, user.role),
+                new Claim("FullName", $"{user.firstname} {user.lastname}")
+            };
 
             var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity));
@@ -194,6 +202,23 @@ namespace Legal_Law_Transactions.Controllers
                 "Prosecutor" => RedirectToAction("Dashboard", "Prosecutor"),
                 _ => RedirectToAction("Login")
             };
+        }
+
+        private void LogFailedLoginAttempt(string email, string ipAddress, string description)
+        {
+            string query = "INSERT INTO ApplicationLogs (EventType, EventDescription, UserName, IPAddress) " +
+                           "VALUES (@EventType, @EventDescription, @UserName, @IPAddress)";
+
+            using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                connection.Execute(query, new
+                {
+                    EventType = "Failed Login",
+                    EventDescription = description,
+                    UserName = email,
+                    IPAddress = ipAddress
+                });
+            }
         }
 
 

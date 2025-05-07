@@ -372,24 +372,36 @@ namespace Legal_Law_Transactions.Controllers
             return File(fileBytes, "application/pdf", fileName);
         }
 
-        public async Task<IActionResult> MySchedule()
+        public IActionResult MySchedule()
         {
             var email = HttpContext.Session.GetString("UserEmail");
             var currentUser = _context.Users.FirstOrDefault(u => u.email == email);
             if (currentUser == null) return RedirectToAction("Login", "Account");
+
+            int pageSize = 10;
+            int currentPage = string.IsNullOrEmpty(Request.Query["page"]) ? 1 : int.Parse(Request.Query["page"]);
 
             var myCaseIds = _context.Cases
                 .Where(c => c.user_id == currentUser.user_id)
                 .Select(c => c.case_id)
                 .ToList();
 
+            var totalCount = _context.Schedules.Count(s => myCaseIds.Contains(s.case_id));
+            int totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
             var schedules = _context.Schedules
                 .Where(s => myCaseIds.Contains(s.case_id))
                 .Include(s => s.Case)
+                .Skip((currentPage - 1) * pageSize)
+                .Take(pageSize)
                 .ToList();
+
+            ViewData["CurrentPage"] = currentPage;
+            ViewData["TotalPages"] = totalPages;
 
             return View(schedules);
         }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ChangePassword(string CurrentPassword, string NewPassword, string ConfirmPassword)
